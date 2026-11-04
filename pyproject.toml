@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "doxtruder"
+description = "Generate Markdown documentation from live system configurations (REST APIs) using Jinja2 templates"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Holger Willenborg" }]
+dependencies = [
+    "click>=8.5.0",
+    "pyyaml>=6.0.3",
+    "requests>=2.34.2",
+    "python-dotenv>=1.2.3",
+    "Jinja2>=3.1.6",
+    "jsonpath-ng>=1.11.0",
+]
+
+[tool.setuptools.dynamic]
+version = { file = "doxtruder/__init__.py", attr = "__version__" }
+
+[project.optional-dependencies]
+test = [
+    "pytest>=9.1",
+    "requests-mock>=1.12",
+    "pytest-cov>=7.1",
+]
+dev = [
+    "ruff>=0.6",
+    "black>=24.1",
+]
+docs = [
+    "sphinx>=8.0",
+    "sphinx-rtd-theme>=3.0",
+]
+
+[project.scripts]
+doxtruder = "doxtruder.cli:main"
+
+[tool.setuptools]
+packages = ["doxtruder"]
+
+[tool.setuptools.package-data]
+doxtruder = ["templates/*.jinja"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["venv", ".venv", "htmlcov", "output", "docs/sphinx/_build"]
+
+[tool.ruff.lint]
+# default E/F rules plus common upgrades; W291/W293 (trailing whitespace)
+# were pervasive before the first cleanup pass
+select = ["E4", "E7", "E9", "F", "B", "I"]
+ignore = [
+    # B904: `raise X.wrap(exc, ...)` is the project's idiom for converting
+    # foreign errors; wrap() sets __cause__ explicitly, so `from exc` would
+    # be redundant.
+    "B904",
+    # B027: ConfigProvider.init_entity/render_init/render_finalize are
+    # deliberately optional no-op hooks, not abstract methods.
+    "B027",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+extend-exclude = "(venv|\\.venv|htmlcov|output|docs/sphinx/_build)"

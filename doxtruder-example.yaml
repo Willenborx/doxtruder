@@ -1,0 +1,126 @@
+#
+# Settings
+#
+
+settings:
+  title: My Environment
+  outputpath: ./output
+#  templatefolder: <folder> use to use different Jinja2 templates (recommended to copy the originals and cut down to size)
+#  timeout: 30             HTTP request timeout in seconds for all API calls (default: 10)
+#  sslcert: ignore         skip certificate verification for self-signed hosts (same as --ssl-cert-ignore / -i)
+
+
+#
+# Entities. Put URL and API Keys into .env file, these will be substituted during run
+# Check the examples for the correct Authenticaton headers. Basic Auth check the OPNSense
+#
+
+entities:
+
+  # Gitea: Standard RESTprovider with Authorization header
+  Gitea:
+    provider: RESTProvider
+    template: gitea.md.jinja
+    title: Gitea
+    headers:
+      Authorization: token ${GITEA_KEY}
+      accept: "application/json"
+      Content-Type: "application/json"
+    baseURL: ${GITEA_URL}
+    endpoints:
+      users: /admin/users
+      repos: /users/$jpath{$.users[*].login}/repos
+      orgs: /admin/orgs
+      cron: /admin/cron
+      unadopted: /admin/unadopted
+      settings_api: /settings/api
+      settings_repository: /settings/repository
+      settings_attachment: /settings/attachment
+      settings_ui: /settings/ui
+
+  # Proxmox: Standard REST Provider
+  # Replace <node> in the per-node endpoints with your actual PVE node name
+  Proxmox:
+    provider: RESTProvider
+    template: proxmox.md.jinja
+    title: Proxmox VE
+    baseURL: ${PROXMOX_BASE}
+    headers:
+      Authorization: PVEAPIToken=${PROXMOX_KEY}
+      accept: "application/json"
+      Content-Type: "application/json"
+    endpoints:
+      nodes: /cluster/resources?type=node
+      vms: /cluster/resources?type=vm
+      storage: /cluster/resources?type=storage
+      version: /version
+      clusteroptions: /cluster/options
+      domains: /access/domains
+      users: /access/users
+      groups: /access/groups
+      hadetails: /cluster/ha/status/current
+      netconfig: /nodes/$jpath{$.nodes.data[*].node}/network
+      dns: /nodes/$jpath{$.nodes.data[*].node}/dns
+      timecfg: /nodes/$jpath{$.nodes.data[*].node}/time
+      disks: /nodes/$jpath{$.nodes.data[*].node}/disks/list
+
+  # Unifi: read per site — devstats/vouchers are fetched once per site name
+  # from the sites endpoint ($jpath expansion), so the retrieved data is
+  # nested one level under the site name
+  Unifi:
+    provider: RESTProvider
+    template: unifi.md.jinja
+    title: Unifi Network
+    baseURL: ${UNIFI_BASE}
+    headers:
+      x-api-key: ${UNIFI_KEY}
+      accept: "application/json"
+      content-type: "application/json"
+  
+    endpoints:
+      sites: /api/self/sites
+      devstats: /api/s/$jpath{$.sites.data[*].name}/stat/device
+      vouchers: /api/s/$jpath{$.sites.data[*].name}/stat/voucher
+
+  # OPNSense with standard RESTProvider
+  Firewall:
+    provider: RESTProvider
+    template: opnsense.md.jinja
+
+    title: Firewall Configuration
+    baseURL: ${OPNSENSE_BASE}
+    auth:
+      basic:
+        user: ${OPNSENSE_KEY}
+        pass: ${OPNSENSE_SECRET}
+    endpoints:
+      status: /core/system/status
+      firmware: /core/firmware/status
+      interfaces: /interfaces/overview/export
+      users: /auth/user/search
+      rules: /firewall/filter/searchRule
+      time: /diagnostics/system/systemTime
+
+  # OpenRouter: built-in provider, Bearer auth. Usage totals are aggregated
+  # automatically via a POST to the analytics endpoint during retrieval
+  OpenRouter:
+    provider: OpenrouterProvider
+    template: openrouter.md.jinja
+    title: OpenRouter Usage
+    baseURL: https://openrouter.ai/api/v1
+    # account/management key for the POST /analytics/query usage aggregate
+    APIKey: ${OPENROUTER_KEY}
+    headers:
+      Authorization: Bearer ${OPENROUTER_KEY}
+      accept: "application/json"
+      Content-Type: "application/json"
+    endpoints:
+      keys: /keys
+      key: /auth/key
+      credits: /credits
+      workspaces: /workspaces
+      guardrails: /guardrails
+      byok: /byok
+      presets: /presets
+      # daily usage is queried via POST /api/v1/analytics/query in aggregate_usage()
+

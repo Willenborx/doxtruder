@@ -1,0 +1,146 @@
+{% include 'header.md.jinja' %}
+{% if 'info' in data -%}
+{% set info = data['info'] -%}
+# Instance
+
+- - -
+
+| Version | Frontend URL | Max File Size | Items per Page | MOTD |
+| ------- | ------------ | ------------- | -------------- | ---- |
+| {{ info.get('version','') }} | {{ info.get('frontend_url','') }} | {{ info.get('max_file_size','') }} | {{ info.get('max_items_per_page','') }} | {{ info.get('motd','') }} |
+
+| Feature | Enabled |
+| ------- | ------- |
+| Link sharing | {{ 'yes' if info.get('link_sharing_enabled') else 'no' }} |
+| Task attachments | {{ 'yes' if info.get('task_attachments_enabled') else 'no' }} |
+| Task comments | {{ 'yes' if info.get('task_comments_enabled') else 'no' }} |
+| Webhooks | {{ 'yes' if info.get('webhooks_enabled') else 'no' }} |
+| CalDAV | {{ 'yes' if info.get('caldav_enabled') else 'no' }} |
+| TOTP | {{ 'yes' if info.get('totp_enabled') else 'no' }} |
+| Email reminders | {{ 'yes' if info.get('email_reminders_enabled') else 'no' }} |
+| User deletion | {{ 'yes' if info.get('user_deletion_enabled') else 'no' }} |
+| Public teams | {{ 'yes' if info.get('public_teams_enabled') else 'no' }} |
+| Demo mode | {{ 'yes' if info.get('demo_mode_enabled') else 'no' }} |
+| Concurrent writes | {{ 'yes' if info.get('concurrent_writes') else 'no' }} |
+
+{% set auth = info.get('auth', {}) -%}
+## Authentication
+
+| Provider | Enabled | Details |
+| -------- | ------- | ------- |
+| local | {{ 'yes' if auth.get('local', {}).get('enabled') else 'no' }} | registration: {{ 'yes' if auth.get('local', {}).get('registration_enabled') else 'no' }} |
+| ldap | {{ 'yes' if auth.get('ldap', {}).get('enabled') else 'no' }} | |
+| openid_connect | {{ 'yes' if auth.get('openid_connect', {}).get('enabled') else 'no' }} | |
+{% for p in auth.get('openid_connect', {}).get('providers') or [] %}
+| &nbsp;&nbsp;&bull; {{ p.get('name','') }} ({{ p.get('key','') }}) | | client {{ p.get('client_id','') }}, scope {{ p.get('scope','') }} |{% endfor %}
+- **Available migrators**: {{ (info.get('available_migrators') or []) | join(', ') }}
+- **Background providers**: {{ (info.get('enabled_background_providers') or []) | join(', ') }}
+- **Pro features**: {{ (info.get('enabled_pro_features') or []) | join(', ') if info.get('enabled_pro_features') else 'none' }}
+{% endif -%}
+{% if 'user' in data -%}
+{% set user = data['user'] -%}
+{% set usettings = user.get('settings', {}) -%}
+# Current User
+
+- - -
+
+- **ID**: {{ user.get('id','') }} / **Username**: {{ user.get('username','') }} / **Name**: {{ user.get('name','') }}
+- **Email**: {{ user.get('email','') }}{% if user.get('pending_email') %} (pending: {{ user.get('pending_email','') }}){% endif %}
+- **Admin**: {{ 'yes' if user.get('is_admin') else 'no' }} / **Local user**: {{ 'yes' if user.get('is_local_user') else 'no' }} / **Auth provider**: {{ user.get('auth_provider','') }}
+- **Timezone**: {{ usettings.get('timezone','') }} / **Language**: {{ usettings.get('language','') }} / **Week starts**: {{ usettings.get('week_start','') }}
+- **Email reminders**: {{ 'yes' if usettings.get('email_reminders_enabled') else 'no' }} / **Overdue reminders**: {{ 'yes' if usettings.get('overdue_tasks_reminders_enabled') else 'no' }} at {{ usettings.get('overdue_tasks_reminders_time','') }}
+{% endif -%}
+{% if 'tokens' in data -%}
+# API Tokens
+
+- - -
+
+| ID | Title | Created | Expires | Permissions |
+| -- | ----- | ------- | ------- | ----------- |{% for token in data['tokens'] %}
+| {{ token.get('id','') }} | {{ token.get('title','') }} | {{ (token.get('created','') or '')[:19] }} | {{ '' if (token.get('expires_at') or '0001')[:4] == '0001' else token['expires_at'][:19] }} | {% for group, perms in (token.get('permissions') or {}).items() %}{{ group }}: {{ perms | join(',') }}{% if not loop.last %}; {% endif %}{% endfor %} |{% endfor %}
+{% endif -%}
+{% if 'projects' in data -%}
+# Projects ({{ data['projects'] | length }})
+
+- - -
+
+| ID | Title | Identifier | Archived | Favorite | Color | Created | Updated |
+| -- | ----- | ---------- | -------- | -------- | ----- | ------- | ------- |{% for project in data['projects'] %}
+| {{ project.get('id','') }} | {{ project.get('title','') }} | {{ project.get('identifier','') }} | {{ 'yes' if project.get('is_archived') else 'no' }} | {{ 'yes' if project.get('is_favorite') else 'no' }} | {{ project.get('hex_color','') }} | {{ (project.get('created','') or '')[:19] }} | {{ (project.get('updated','') or '')[:19] }} |{% endfor %}
+{% endif -%}
+{% if 'tasks' in data -%}
+# Tasks
+
+- - -
+{% for project in data.get('projects', []) -%}
+{% set tasks = data['tasks'] | selectattr('project_id', 'equalto', project.get('id')) | list -%}
+{% if tasks -%}
+{% set open = tasks | rejectattr('done') | list -%}
+{% set done = tasks | selectattr('done') | list -%}
+## {{ project.get('title','') }} ({{ project.get('id','') }}) — {{ tasks | length }} tasks ({{ open | length }} open / {{ done | length }} done)
+{% if open -%}
+
+### Open Tasks
+
+| ID | Identifier | Title | Priority | Due | Done % | Labels |
+| -- | ---------- | ----- | -------- | --- | ------ | ------ |{% for task in open | sort(attribute='priority', reverse=true) %}
+| {{ task.get('id','') }} | {{ task.get('identifier','') }} | {{ task.get('title','') }} | {{ task.get('priority','') }} | {{ '' if (task.get('due_date') or '0001')[:4] == '0001' else task['due_date'][:16] }} | {{ task.get('percent_done','') }} | {% for label in task.get('labels') or [] %}{{ label.get('title','') }}{% if not loop.last %}, {% endif %}{% endfor %} |{% endfor %}
+{% endif -%}
+{% if done -%}
+
+### Done Tasks
+
+| ID | Identifier | Title | Done at |
+| -- | ---------- | ----- | ------- |{% for task in done %}
+| {{ task.get('id','') }} | {{ task.get('identifier','') }} | {{ task.get('title','') }} | {{ '' if (task.get('done_at') or '0001')[:4] == '0001' else task['done_at'][:16] }} |{% endfor %}
+{% endif -%}
+{% endif -%}
+{% endfor -%}
+{% endif -%}
+{% if 'labels' in data -%}
+# Labels ({{ data['labels'] | length }})
+
+- - -
+
+| ID | Title | Color | Description | Created |
+| -- | ----- | ----- | ----------- | ------- |{% for label in data['labels'] %}
+| {{ label.get('id','') }} | {{ label.get('title','') }} | {{ label.get('hex_color','') }} | {{ label.get('description','') }} | {{ (label.get('created','') or '')[:19] }} |{% endfor %}
+{% endif -%}
+{% if 'webhooks' in data -%}
+# User Webhooks ({{ data['webhooks'] | length }})
+
+- - -
+
+| ID | Target URL | Events | Signed | Created |
+| -- | ---------- | ------ | ------ | ------- |{% for hook in data['webhooks'] %}
+| {{ hook.get('id','') }} | {{ hook.get('target_url','') }} | {{ (hook.get('events') or []) | join(', ') }} | {{ 'yes' if hook.get('secret') else 'no' }} | {{ (hook.get('created','') or '')[:19] }} |{% endfor %}
+{% endif -%}
+{% if 'project_webhooks' in data -%}
+{% set pw_count = data['project_webhooks'].values() | map('length') | sum -%}
+# Project Webhooks ({{ pw_count }})
+
+- - -
+{% if pw_count -%}
+
+| Project | ID | Target URL | Events | Signed | Created |
+| ------- | -- | ---------- | ------ | ------ | ------- |{% for pid, hooks in data['project_webhooks'].items() %}{% for hook in hooks %}
+| {% for project in data.get('projects', []) if project.get('id') | string == pid %}{{ project.get('title','') }}{% endfor %} ({{ pid }}) | {{ hook.get('id','') }} | {{ hook.get('target_url','') }} | {{ (hook.get('events') or []) | join(', ') }} | {{ 'yes' if hook.get('secret') else 'no' }} | {{ (hook.get('created','') or '')[:19] }} |{% endfor %}{% endfor %}
+{% endif -%}
+{% endif -%}
+{% if 'webhook_events' in data -%}
+# Webhook Events
+
+- - -
+
+Available event names for webhook targets: {{ (data['webhook_events'] | sort) | join(', ') }}
+{% endif -%}
+{% if 'teams' in data -%}
+# Teams ({{ data['teams'] | length }})
+
+- - -
+
+| ID | Name | Description | Members |
+| -- | ---- | ----------- | ------- |{% for team in data['teams'] %}
+| {{ team.get('id','') }} | {{ team.get('name','') }} | {{ team.get('description','') }} | {% for member in team.get('members') or [] %}{{ member.get('username','') }}{% if member.get('admin') %} (admin){% endif %}{% if not loop.last %}, {% endif %}{% endfor %} |
+{% endfor %}
+{% endif -%}

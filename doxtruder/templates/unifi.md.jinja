@@ -1,0 +1,61 @@
+{% include 'header.md.jinja' %}
+{% if 'devstats' in data -%}
+# Devices
+{% for site in data['sites']['data'] -%}
+{% set sn = site.get('name','') -%}
+{% if sn in data['devstats'] and data['devstats'][sn].get('data') -%}
+## {{ site.get('desc', sn) }}
+
+| Name | Type | Model | IP | MAC | Clients | Firmware | State |
+| ---- | ---- | ----- | -- | --- | ------- | -------- | ----- |{% for dev in data['devstats'][sn]['data'] %}
+| {{ dev.get('name','') }} | {{ dev.get('type','') }} | {{ dev.get('shortname', dev.get('model','')) }} | {{ dev.get('ip','') }} | {{ dev.get('mac','') }} | {{ dev.get('num_sta', dev.get('user-num_sta','')) }} | {{ dev.get('displayable_version', dev.get('version','')) }} | {{ dev.get('state','') }} |{% endfor %}
+{% for dev in data['devstats'][sn]['data'] %}
+### {{ dev.get('name','') }}
+
+- **Model**: {{ dev.get('shortname', dev.get('model','')) }} ({{ dev.get('model','') }})
+- **Type**: {{ dev.get('type','') }}
+- **MAC**: {{ dev.get('mac','') }} / **Serial**: {{ dev.get('serial','') }}
+- **IP**: {{ dev.get('ip','') }}
+- **Firmware**: {{ dev.get('displayable_version', dev.get('version','')) }} / **Required**: {{ dev.get('required_version','') }}
+- **Clients**: {{ dev.get('num_sta', dev.get('user-num_sta','')) }} (user: {{ dev.get('user-num_sta','') }}, guest: {{ dev.get('guest-num_sta','') }})
+- **Adopted**: {{ dev.get('adopted','') }} / **Upgradable**: {{ dev.get('upgradable','') }}{% if dev.get('config_network') %}
+- **Management**: {{ dev.get('config_network',{}).get('ip','') }} ({{ dev.get('config_network',{}).get('type','') }}), GW {{ dev.get('config_network',{}).get('gateway','') }}{% endif %}
+{% if dev.get('radio_table') -%}
+  {% set radios = {'ng':'2.4 GHz','na':'5 GHz','na6':'6 GHz'} %}
+#### Radios
+
+| Radio | Band | Channel | Width | Tx power | Mode |
+| ----- | ---- | ------- | ----- | -------- | ---- |{% for r in dev['radio_table'] %}
+| {{ r.get('name','') }} | {{ radios.get(r.get('radio',''), r.get('radio','')) }} | {{ r.get('channel','') }} | {{ r.get('ht','') }} MHz | {{ r.get('tx_power_mode','') }} ({{ r.get('max_txpower','') }} dBm) | {{ r.get('nss','') }} sp. streams |{% endfor %}
+{% endif %}
+{% if dev.get('vap_table') -%}
+#### Wireless LANs (VAPs)
+
+| SSID | Band | Channel | Usage | Clients | State |
+| ---- | ---- | ------- | ----- | ------- | ----- |{% for vap in dev['vap_table'] %}
+| {{ vap.get('essid','') }} | {{ vap.get('radio_name','') }} ({{ vap.get('radio','') }}) | {{ vap.get('channel','') }} | {{ vap.get('usage','') }} | {{ vap.get('num_sta', vap.get('num_sta_unique','')) }} | {{ vap.get('state','') }} |{% endfor %}
+{% endif -%}
+{% if dev.get('port_table') and dev.get('is_access_point') == False -%}
+#### Ports
+
+| Port | Name | Link | Speed | PoE | PoE power | Tx / Rx | State |
+| ---- | ---- | ---- | ----- | --- | --------- | ------- | ----- |{% for p in dev['port_table'] %}
+| {{ p.get('port_idx','') }} | {{ p.get('name','') }} | {{ p.get('media','') }} | {{ p.get('speed','') }} Mb/s | {{ 'yes' if p.get('port_poe', p.get('poe_enable',False)) else 'no' }} | {{ p.get('poe_power','') if p.get('port_poe', p.get('poe_enable',False)) else '' }} W | {{ (p.get('tx_bytes',0)/1073741824) | round(1) if p.get('tx_bytes') is not none else '' }}G / {{ (p.get('rx_bytes',0)/1073741824) | round(1) if p.get('rx_bytes') is not none else '' }}G | {{ 'up' if p.get('up') else 'down' }} |{% endfor %}
+{% endif -%}
+{% endfor %}
+{% endif -%}
+{% endfor -%}
+{% endif -%}
+{% if 'vouchers' in data -%}
+## Guest WiFi Vouchers
+{% for site in data['sites']['data'] -%}
+{% set sn = site.get('name','') -%}
+{% if sn in data['vouchers'] and data['vouchers'][sn].get('data') -%}
+### {{ site.get('desc', sn) }}
+
+| Name | Code | Validity | Used | Status |
+| ---- | ---- | -------- | ---- | ------ |{% for v in data['vouchers'][sn]['data'] %}
+| {{ v.get('note','') }} | {{ v.get('code','') }} | {{ (v.get('duration',0) // 1440) }}d {{ ((v.get('duration',0) % 1440) // 60) }}h | {{ v.get('used',0) }}/{{ v.get('quota',1) }} | {{ v.get('status','') }} |{% endfor %}
+{% endif -%}
+{% endfor %}
+{% endif -%}

@@ -1,0 +1,81 @@
+{# requesty.md.jinja - Requesty management overview                          #}
+{# Key/usage/access sections are keyed by UUID; the key_name/group_name      #}
+{# macros resolve those ids back to human readable names via $.keys.keys[*]  #}
+{# and $.group.groups[*].                                                    #}
+{% include 'header.md.jinja' %}
+{% macro key_name(keyid) -%}
+{%- set matches = data['keys']['keys'] | default([], true) | selectattr('id', 'equalto', keyid) | map(attribute='name') | list -%}
+{{- matches[0] if matches else keyid -}}
+{% endmacro -%}
+{% macro group_name(gid) -%}
+{%- set matches = data['group']['groups'] | default([], true) | selectattr('id', 'equalto', gid) | map(attribute='name') | list -%}
+{{- matches[0] if matches else gid -}}
+{% endmacro -%}
+{% macro fmt_ts(value) -%}
+{%- if value -%}{{ value | replace('T', ' ') | truncate(19, true, '') }}{%- endif -%}
+{% endmacro -%}
+{% if 'org' in data and data['org'] -%}
+{% set org = data['org'] -%}
+# Organization
+
+| Name | Balance |
+| ---- | ------- |
+| {{ org.get('name','') }} | ${{ '%.4f' | format(org.get('balance','0') | float) }} |
+{% endif -%}
+{% if 'keys' in data and data['keys'].get('keys') -%}
+# API Keys
+
+| # | Name | Created | Last Used | Limit | Spend | Manage | Completions | Created By | Group |
+| - | ---- | ------- | --------- | ----- | ----- | ------ | ----------- | ---------- | ----- |{% for key in data['keys']['keys'] %}
+| {{ loop.index }} | {{ key.get('name','') }} | {{ fmt_ts(key.get('created_at','')) }} | {{ fmt_ts(key.get('last_used_at','')) }} | {{ key.get('monthly_limit','') }} | ${{ '%.4f' | format(key.get('monthly_spend','0') | float) }} | {{ key.get('permissions',{}).get('manage','') }} | {{ key.get('permissions',{}).get('completions','') }} | {{ key.get('created_by',{}).get('email','') }} | {{ group_name(key.get('group',{}).get('id','')) if key.get('group') else '' }} |{% endfor %}
+{% endif -%}
+{% if 'keyusage' in data and data['keyusage'] -%}
+# Key Usage
+
+| Key | Month | Requests | Prompt | Completion | Tokens | Spend |
+| --- | ----- | -------- | ------ | ---------- | ------ | ----- |{% for keyid, kdata in data['keyusage'].items() %}{% for month, usage in kdata.get('usage',{}).items() %}
+| {{ key_name(keyid) }} | {{ month }} | {{ usage.get('total_requests','') }} | {{ usage.get('input_tokens','') }} | {{ usage.get('output_tokens','') }} | {{ usage.get('total_tokens','') }} | ${{ '%.4f' | format(usage.get('spend','0') | float) }} |{% endfor %}{% endfor %}
+{% endif -%}
+{% if 'members' in data and data['members'].get('members') -%}
+# Members
+
+| # | Name | Email | User ID |
+| - | ---- | ----- | ------- |{% for m in data['members']['members'] %}
+| {{ loop.index }} | {{ ([m.get('first_name',''), m.get('last_name','')] | join(' ')).strip() }} | {{ m.get('user_email','') }} | {{ m.get('user_id','') }} |{% endfor %}
+{% endif -%}
+{% if 'group' in data and data['group'].get('groups') -%}
+# Groups
+
+| Name | ID | Members | Monthly Spend | Monthly Budget | Budget / User | Access Lists | Created |
+| ---- | -- | ------- | ------------- | -------------- | ------------- | ------------ | ------- |{% for g in data['group']['groups'] %}
+| {{ g.get('name','') }} | {{ g.get('id','') }} | {{ g.get('members_count','') }} | ${{ '%.4f' | format(g.get('monthly_spend',0) | float) }} | {{ g.get('monthly_budget','') }} | {{ g.get('monthly_budget_per_user','') }} | {{ g.get('access_list_ids',[]) | join(', ') }} | {{ fmt_ts(g.get('created_at','')) }} |{% endfor %}
+{% endif -%}
+{% if 'approved-models' in data and data['approved-models'] -%}
+{% set models = data['approved-models'] -%}
+# Approved Models
+
+| Category | Count |
+| -------- | ----- |
+{% for cat, lst in models.items() if lst -%}
+| {{ cat }} | {{ lst | length }} |
+{% endfor %}
+{% for cat, lst in models.items() if lst %}
+## {{ cat | title }} Models
+
+{% for model in lst | sort -%}
+- {{ model }}
+{% endfor %}
+{% endfor -%}
+{% endif -%}
+{% if 'access-list' in data and data['access-list'].get('access_lists') -%}
+# Access Lists
+
+| ID | Organization | Chat Models | Image Models |
+| -- | ------------ | ----------- | ------------ |{% for al in data['access-list']['access_lists'] %}
+| {{ al.get('id','') }} | {{ al.get('organization_id','') }} | {{ al.get('chat',[]) | length }} | {{ al.get('image',[]) | length }} |{% endfor %}
+{% endif -%}
+{% if 'routingpolicy' in data and data['routingpolicy'] -%}
+# Routing Policies
+
+{{ data['routingpolicy'] | tojson }}
+{% endif -%}

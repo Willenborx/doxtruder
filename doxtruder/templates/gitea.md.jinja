@@ -1,0 +1,57 @@
+{% include 'header.md.jinja' %}
+{% if data.get('users') -%}
+# Users
+
+| Login | Name | Email | Admin | Active | Restricted | Source | Last Login | Created | Visibility |
+| ----- | ---- | ----- | ----- | ------ | ---------- | ------ | ---------- | ------- | ---------- |{% for user in data['users'] %}
+| {{ user.get('login','') }} | {{ user.get('full_name','') }} | {{ user.get('email','') }} | {{ 'yes' if user.get('is_admin') else 'no' }} | {{ 'yes' if user.get('active') else 'no' }} | {{ 'yes' if user.get('restricted') else 'no' }} | {{ user.get('source_id','') }} | {{ (user.get('last_login','') or '')[:19] }} | {{ (user.get('created','') or '')[:19] }} | {{ user.get('visibility','') }} |{% endfor %}
+{% endif -%}
+{% for owner, repos in data.get('repos', {}).items() if repos -%}
+# Repositories ({{ owner }})
+
+| Name | Description | Language | Default | Private | Archived | Size (KB) | Updated |
+| ---- | ----------- | -------- | ------- | ------- | -------- | --------- | ------- |{% for repo in repos %}
+| [{{ repo.get('name','') }}]({{ repo.get('html_url','') }}) | {{ repo.get('description','') }} | {{ repo.get('language','') }} | {{ repo.get('default_branch','') }} | {{ 'yes' if repo.get('private') else 'no' }} | {{ 'yes' if repo.get('archived') else 'no' }} | {{ repo.get('size','') }} | {{ (repo.get('updated_at','') or '')[:19] }} |{% endfor %}
+{% endfor -%}
+{% if data.get('cron') -%}
+# Cron Jobs
+
+| Task | Schedule | Executions | Last Run |
+| ---- | -------- | ---------- | -------- |{% for job in data['cron'] %}
+| {{ job.get('name','') }} | {{ job.get('schedule','') }} | {{ job.get('exec_times','') }} | {{ (job.get('prev','') or '')[:19] }} |{% endfor %}
+{% endif -%}
+{% if data.get('unadopted') -%}
+# Unadopted Repositories
+
+| Full Name |
+| --------- |{% for ua in data['unadopted'] %}
+| {{ ua }} |{% endfor %}
+{% endif -%}
+{% if data.get('settings_api') -%}
+# API Settings
+
+| Setting | Value |
+| ------- | ----- |{% for k, v in data['settings_api'].items() %}
+| {{ k }} | {{ v }} |{% endfor %}
+{% endif -%}
+{% if data.get('settings_repository') -%}
+# Repository Settings
+
+| Setting | Value |
+| ------- | ----- |{% for k, v in data['settings_repository'].items() %}
+| {{ k }} | {{ v }} |{% endfor %}
+{% endif -%}
+{% if data.get('settings_attachment') -%}
+# Attachment Settings
+
+| Setting | Value |
+| ------- | ----- |{% for k, v in data['settings_attachment'].items() %}
+| {{ k }} | {{ v }} |{% endfor %}
+{% endif -%}
+{% if data.get('settings_ui') -%}
+# UI Settings
+
+| Setting | Value |
+| ------- | ----- |{% for k, v in data['settings_ui'].items() %}
+| {{ k }} | {{ v if v is not string else v }} |{% endfor %}
+{% endif -%}

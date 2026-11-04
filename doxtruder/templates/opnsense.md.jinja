@@ -1,0 +1,45 @@
+{% include 'header.md.jinja' %}
+{% if 'status' in data -%}
+# System Status
+
+| Subsystem | Status | Message |
+| --------- | ------ | ------- |
+| {{ data['status'].get('metadata',{}).get('system',{}).get('title','System') }} | {{ data['status'].get('metadata',{}).get('system',{}).get('status','') }} | {{ data['status'].get('metadata',{}).get('system',{}).get('message','') }} |
+{% endif -%}
+{% if 'firmware' in data -%}
+# Firmware
+{% set fw = data['firmware'].get('product',{}) -%}
+| Product | Version | Latest | Series | Update |
+| ------- | ------- | ------ | ------ | ------ |
+| {{ fw.get('product_name', fw.get('product_id','')) }} | {{ fw.get('product_version','') }} | {{ fw.get('product_latest','') }} | {{ fw.get('product_series','') }} | {{ data['firmware'].get('status','') }} |
+
+{{ data['firmware'].get('status_msg','') }}
+{% endif -%}
+{% if 'time' in data -%}
+# System Time
+
+| Uptime | Date/Time | Boot Time | Config | Load Average |
+| ------ | --------- | --------- | ------ | ------------ |
+| {{ data['time'].get('uptime','') }} | {{ data['time'].get('datetime','') }} | {{ data['time'].get('boottime','') }} | {{ data['time'].get('config','') }} | {{ data['time'].get('loadavg','') }} |
+{% endif -%}
+{% if 'interfaces' in data -%}
+# Interfaces
+
+| Device | Description | Identifier | Status | Enabled | Link type | IPv4 | IPv6 | MAC | MTU |
+| ------ | ----------- | ---------- | ------ | ------- | --------- | ---- | ---- | --- | --- |{% for iface in data['interfaces'] %}
+| {{ iface['device'] }} | {{ iface.get('description','') }} | {{ iface.get('identifier','') }} | {{ iface.get('status','') }} | {{ iface.get('enabled','') }} | {{ iface.get('link_type','') }} | {{ iface.get('addr4','') }} | {{ iface.get('addr6','') }} | {{ iface.get('macaddr','') }} | {{ iface.get('mtu','') }} |{% endfor %}
+{% endif -%}
+{% if 'rules' in data and data['rules']['rows'] -%}
+# Firewall Rules
+
+| # | Enabled | Action | Proto | Source | Dest | DPort | Dir | Log | Description |
+| - | ------- | ------ | ----- | ------ | ---- | ----- | --- | --- | ----------- |{% for rule in data['rules']['rows'] %}
+| {{ loop.index }} | {{ 'yes' if rule.get('enabled') == '1' else 'no' }} | {{ rule.get('%action', rule.get('action','')) }} | {{ rule.get('%protocol', rule.get('protocol','')) }} | {{ rule.get('source_net','') }} | {{ rule.get('destination_net','') }} | {{ rule.get('destination_port','') }} | {{ rule.get('%direction', rule.get('direction','')) }} | {{ 'yes' if rule.get('log') else 'no' }} | {{ rule.get('description','') }} |{% endfor %}
+{% endif -%}
+{% if 'users' in data -%}
+# Users
+
+| UID | Name | Description | Scope | Group | Admin | Email | Disabled |
+| --- | ---- | ----------- | ----- | ----- | ----- | ----- | -------- |{% for user in data['users']['rows'] %}
+| {{ user.get('uid','') }} | {{ user.get('name','') }} | {{ user.get('descr','') }} | {{ user.get('scope','') }} | {{ user.get('%group_memberships','') }} | {{ 'yes' if user.get('is_admin') == '1' else 'no' }} | {{ user.get('email','') }} | {{ 'yes' if user.get('disabled') == '1' else 'no' }} |{% endfor %}
+{% endif -%}

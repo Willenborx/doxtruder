@@ -1,0 +1,6 @@
+click>=8.5.0
+pyyaml>=6.0.3
+requests>=2.34.2
+python-dotenv>=1.2.3
+Jinja2>=3.1.6
+jsonpath-ng>=1.11.0

@@ -1,0 +1,83 @@
+{# openrouter.md.jinja - OpenRouter management overview                     #}
+{# Most /api/v1 responses nest their payload under a top-level "data" key. #}
+{% include 'header.md.jinja' %}
+{%- macro fmt_dt(v) -%}{%- if v -%}{%- set s = (v | string).rstrip('Z').replace('T',' ') -%}{%- if s | length > 19 -%}{{ s[:19] }}{%- elif s | length == 19 -%}{{ s }}{%- else -%}{{ s }} 00:00:00{%- endif -%}{%- endif -%}{%- endmacro -%}
+{% if 'credits' in data and data['credits'].get('data') -%}
+{% set creds = data['credits']['data'] -%}
+# Credits & Usage
+
+| Total Credits | Total Usage | Has Payment Method |
+| ------------- | ----------- | ------------------ |
+| {{ creds.get('total_credits','') }} | {{ creds.get('total_usage','') }} | {{ 'yes' if creds.get('has_payment_method') else 'no' }} |
+{% endif -%}
+{% if 'key' in data and data['key'].get('data') -%}
+{% set kd = data['key']['data'] -%}
+# Current Key Usage
+
+| Key | Label | Limit | Usage | Expires | Management |
+| --- | ----- | ----- | ----- | ------- | ---------- |
+| {{ kd.get('label', kd.get('name','')) }} | {{ kd.get('label','') }} | {{ kd.get('limit','') }} | {{ kd.get('usage','') }} | {{ fmt_dt(kd.get('expires_at','')) }} | {{ 'yes' if kd.get('is_management_key') else 'no' }} |
+{% endif -%}
+{% if 'keys' in data and data['keys']['data'] -%}
+# API Keys
+
+| # | Name | Label | Created | Last Used | Disabled | Limit | Usage | Workspace |
+| - | ---- | ----- | ------- | --------- | -------- | ----- | ----- | --------- |{% for key in data['keys']['data'] %}
+| {{ loop.index }} | {{ key.get('name','') }} | {{ key.get('label','') }} | {{ fmt_dt(key.get('created_at','')) }} | {{ fmt_dt(key.get('last_used_at','')) }} | {{ 'yes' if key.get('disabled') else 'no' }} | {{ key.get('limit','') }} | {{ key.get('usage','') }} | {{ key.get('workspace_id','') }} |{% endfor %}
+{% endif -%}
+{% if 'workspaces' in data and data['workspaces']['data'] -%}
+# Workspaces
+
+| Name | Slug | ID | Created | Default model |
+| ---- | ---- | -- | ------- | ------------- |{% for ws in data['workspaces']['data'] %}
+| {{ ws.get('name','') }} | {{ ws.get('slug','') }} | {{ ws.get('id','') }} | {{ fmt_dt(ws.get('created_at','')) }} | {{ ws.get('default_text_model','') }} |{% endfor %}
+{% endif -%}
+{% if 'guardrails' in data and data['guardrails']['data'] -%}
+# Guardrails (spend limits & restrictions)
+
+| Name | Limit USD | Reset | Allowed models | Ignored models | Allowed providers | ZDR |
+| ---- | --------- | ----- | -------------- | -------------- | ----------------- | --- |{% for g in data['guardrails']['data'] %}
+| {{ g.get('name','') }} | {{ g.get('limit_usd','') }} | {{ g.get('reset_interval','') }} | {{ g.get('allowed_models','') }} | {{ g.get('ignored_models','') }} | {{ g.get('allowed_providers','') }} | {{ 'yes' if (g.get('enforce_zdr') or g.get('enforce_zdr_anthropic') or g.get('enforce_zdr_openai') or g.get('enforce_zdr_google') or g.get('enforce_zdr_xai') or g.get('enforce_zdr_other')) else 'no' }} |{% endfor %}
+{% endif -%}
+{% if 'byok' in data and data['byok'].get('data') -%}
+# Bring-Your-Own-Key Credentials ({{ data['byok'].get('total_count', data['byok']['data'] | length) }})
+
+| Provider | Label | Created |
+| -------- | ----- | ------- |{% for cred in data['byok']['data'] %}
+| {{ cred.get('provider','') }} | {{ cred.get('label') or cred.get('description','') }} | {{ fmt_dt(cred.get('created_at','')) }} |{% endfor %}
+{% endif -%}
+{% if 'presets' in data and data['presets'].get('data') -%}
+# Presets ({{ data['presets'].get('total_count', data['presets']['data'] | length) }})
+
+| Name | Slug | Updated |
+| ---- | ---- | ------- |{% for p in data['presets']['data'] %}
+| {{ p.get('name','') }} | {{ p.get('slug','') }} | {{ fmt_dt(p.get('updated_at','')) }} |{% endfor %}
+{% endif -%}
+{% if 'limits' in data and data['limits'].get('data') -%}
+# API Limits
+
+{{ data['limits']['data'] | tojson }}
+{% endif -%}
+{% if 'activity' in data and data['activity'].get('data') -%}
+# Activity last 30 days (by endpoint)
+
+| Endpoint | Requests |
+| -------- | -------- |{% for act in data['activity']['data'] %}
+| {{ act.get('endpoint','') }} | {{ act.get('count', act.get('request_count','')) }} |{% endfor %}
+{% endif -%}
+{% if 'usage' in data and data['usage']['daily'] -%}
+# Last 7 Days Usage
+
+| Date | Requests | Prompt | Completion | Tokens | Cost |
+| ---- | -------- | ------ | ---------- | ------ | ---- |{% for day in data['usage']['daily'] %}
+| {{ fmt_dt(day['date']) }} | {{ day['requests'] }} | {{ day['prompt_tokens'] }} | {{ day['completion_tokens'] }} | {{ day['tokens'] }} | ${{ '%.4f' | format(day['cost']) }} |{% endfor %}
+
+## Week Totals
+
+- Days with activity: {{ data['usage']['week_totals']['days'] }}
+- Requests: {{ data['usage']['week_totals']['requests'] }}
+- Prompt tokens: {{ data['usage']['week_totals']['prompt_tokens'] }}
+- Completion tokens: {{ data['usage']['week_totals']['completion_tokens'] }}
+- **Total tokens: {{ data['usage']['week_totals']['tokens'] }}**
+- **Total cost: ${{ data['usage']['week_totals']['cost'] }}**
+{% endif -%}

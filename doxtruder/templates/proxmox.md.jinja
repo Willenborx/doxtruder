@@ -1,0 +1,64 @@
+{% include 'header.md.jinja' %}
+{% if 'nodes' in data and 'vms' in data and 'storage' in data -%}
+## Overview
+
+- Nodes: {{ data['nodes']['data'] | length }}
+- VMs: {{ data['vms']['data'] | length }} ({{ data['vms']['data'] | selectattr('status','equalto','running') | list | length }} running, {{ data['vms']['data'] | selectattr('status','equalto','stopped') | list | length }} stopped, {{ data['vms']['data'] | selectattr('template','equalto',1) | list | length }} templates)
+- Storage: {{ data['storage']['data'] | length }} volumes
+{% endif -%}
+{% if 'nodes' in data -%}
+## Nodes
+
+| Name | status | vCPUs | CPU used | RAM | RAM used | RAM % | Disk | Disk used | Disk % | Uptime |
+| ---- | ------ | ----- | -------- | --- | -------- | ----- | ---- | --------- | ------ | ------ |{% for node in data['nodes']['data'] %}
+| {{ node['node'] }} | {{ node['status'] }} | {{ node['maxcpu'] }} | {{ (100*node['cpu']) | round(1) }}% | {{ (node['maxmem']/1073741824) | round(1) }} GB | {{ (node['mem']/1073741824) | round(1) }} GB | {{ (100*node['mem']/node['maxmem']) | round(1) }}% | {{ (node['maxdisk']/1073741824) | round(1) }} GB | {{ (node['disk']/1073741824) | round(1) }} GB | {{ (100*node['disk']/node['maxdisk']) | round(1) }}% | {{ (node['uptime']/86400) | round(1) }}d |{% endfor %}
+{% endif -%}
+{% if 'vms' in data -%}
+## VMs
+
+| vmid | Name | Type | node | vCPUs | CPU used | RAM | RAM used | RAM % | Disk | Net in | Net out | Disk read | Disk write | Tags | Template | status | uptime |
+| ---- | ---- | ---- | ---- | ----- | -------- | --- | -------- | ----- | ---- | ------ | ------- | --------- | ---------- | ---- | -------- | ------ | -------|{% for vm in data['vms']['data'] %}
+| {{ vm['vmid'] }} | {{ vm['name'] }} | {{ vm['type'] }} | {{ vm['node'] }} | {{ vm['maxcpu'] }} | {{ (100*vm['cpu']) | round(1) }}% | {{ (vm['maxmem']/1073741824) | round(1) }} GB | {{ (vm['mem']/1073741824) | round(1) }} GB | {{ (100*vm['mem']/vm['maxmem']) | round(1) }}% | {{ (vm['maxdisk']/1073741824) | round(1) }} GB | {{ (vm['netin']/1073741824) | round(1) }} GB | {{ (vm['netout']/1073741824) | round(1) }} GB | {{ (vm['diskread']/1073741824) | round(1) }} GB | {{ (vm['diskwrite']/1073741824) | round(1) }} GB | {{ vm.get('tags','') }} | {{ 'yes' if vm.get('template',0) else 'no' }} | {{ vm['status'] }} | {{ (vm['uptime']/86400) | round(1) }}d |{% endfor %}
+{% endif -%}
+{% if 'storage' in data %}
+## Storage
+
+| storage | node | plugintype | size | used | used % | free | shared | content |
+| ------- | ---- | ---------- | ---- | ---- | ------ | ---- | ------ | ------- |{% for store in data['storage']['data'] %}
+| {{ store['storage'] }} | {{ store['node'] }} | {{ store['plugintype'] }} | {{ (store['maxdisk']/1073741824) | round(1) }} GB | {{ (store['disk']/1073741824) | round(1) }} GB | {{ (100*store['disk']/store['maxdisk']) | round(1) }}% | {{ ((store['maxdisk']-store['disk'])/1073741824) | round(1) }} GB | {{ 'yes' if store.get('shared',0) else 'no' }} | {{ store['content'] }} |{% endfor -%}
+{% endif -%}
+{% if 'nodes' in data and ('netconfig' in data or 'dns' in data or 'timecfg' in data or 'disks' in data) -%}
+## Node Details
+{% for node in data['nodes']['data'] -%}
+{% set n = node['node'] -%}
+### Node: {{ n }}
+{% if 'netconfig' in data and n in data['netconfig'] and data['netconfig'][n].get('data') -%}
+#### Network
+
+| Interface | Type | Method | Address | CIDR | Gateway | VLAN | Bridge ports | Active | Comments |
+| --------- | ---- | ------ | ------- | ---- | ------- | ---- | ------------ | ------ | -------- |{% for i in data['netconfig'][n]['data'] %}
+| {{ i.get('iface','') }} | {{ i.get('type','') }} | {{ i.get('method','') }} | {{ i.get('address','') }} | {{ i.get('cidr','') }} | {{ i.get('gateway','') }} | {{ i.get('vlan-id','') }} | {{ i.get('bridge_ports','') }} | {{ 'yes' if i.get('active') else 'no' }} | {{ i.get('comments','') | trim }} |{% endfor %}
+{% endif -%}
+{% if 'dns' in data and n in data['dns'] and data['dns'][n].get('data') -%}
+#### DNS
+
+- Search: {{ data['dns'][n]['data'].get('search','') }}
+- DNS 1: {{ data['dns'][n]['data'].get('dns1','') }}
+- DNS 2: {{ data['dns'][n]['data'].get('dns2','') }}
+- DNS 3: {{ data['dns'][n]['data'].get('dns3','') }}
+{% endif -%}
+{% if 'timecfg' in data and n in data['timecfg'] and data['timecfg'][n].get('data') -%}
+#### Time
+
+- Timezone: {{ data['timecfg'][n]['data'].get('timezone','') }}
+- Time: {{ (now().fromtimestamp(data['timecfg'][n]['data'].get('time',0))).strftime('%Y-%m-%d %H:%M') }} / localtime {{ (now().fromtimestamp(data['timecfg'][n]['data'].get('localtime',0))).strftime('%Y-%m-%d %H:%M') }}
+{% endif -%}
+{% if 'disks' in data and n in data['disks'] and data['disks'][n].get('data') -%}
+#### Disks
+
+| Device | Type | Model | Size | Health | Used as | Wearout | RPM | Serial |
+| ------ | ---- | ----- | ---- | ------ | ------- | ------- | --- | ------ |{% for d in data['disks'][n]['data'] %}
+| {{ d.get('devpath','') }} | {{ d.get('type','') }} | {{ d.get('model','') }} | {{ (d.get('size',0)/1073741824) | round(1) }} GB | {{ d.get('health','') }} | {{ d.get('used','') }} | {{ d.get('wearout','') }} | {{ d.get('rpm','') }} | {{ d.get('serial','') }} |{% endfor %}
+{% endif -%}
+{% endfor -%}
+{% endif -%}
