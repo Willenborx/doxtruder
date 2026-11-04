@@ -1,0 +1,16 @@
+.vscode
+venv
+.venv
+.env
+doxtruder.yaml
+__pycache__/
+*.pyc
+htmlcov/
+.coverage
+output/
+.trash/
+docs/doxygen/
+docs/sphinx/_build/
+doxtruder.egg-info/
+*.egg-info/
+.ruff_cache/
