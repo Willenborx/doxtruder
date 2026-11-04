@@ -126,6 +126,8 @@ def main(
 
     (c) 2026 Holger Willenborg, development supported by AI
 
+    \f
+
     :param config: Path to the configuration YAML file.
     :param loglevel: Logging verbosity level (1 to 5).
     :param env: Path to the .env environment variables file.
