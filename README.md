@@ -2,7 +2,7 @@
 
 Doxtruder collects configurations from your infrastructure (REST APIs) and renders them into Markdown documentation using Jinja2 templates. Point it at your homelab — Gitea, Proxmox, UniFi, OPNSense, OpenRouter, Requesty, or any other REST API — and get a readable, up-to-date snapshot of your setup.
 
-(c) 2026 Holger Willenborg, development supported by AI
+Development supported by AI
 
 ## How it works
 
