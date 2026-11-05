@@ -121,7 +121,11 @@ def _create_jinja_env(settings: dict) -> Environment:
             for tplname in loader.list_templates():
                 logging.info(f"Found template {tplname}")
 
-        jinja2env = Environment(loader=loader, autoescape=select_autoescape())
+        jinja2env = Environment(
+            loader=loader,
+            autoescape=select_autoescape(),
+            extensions=["jinja2.ext.do"],
+        )
         jinja2env.globals["now"] = datetime.now
     except Exception as e:
         raise EngineError.wrap(

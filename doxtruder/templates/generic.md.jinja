@@ -6,30 +6,35 @@
   Markdown nested lists. Arrays use [0], [1], [2] notation.
 #}
 
-{% macro kv(value, indent) %}
-{% set sp = '  ' * indent %}
-{% if value is mapping %}
-  {% for k, v in value.items() %}
-    {% if v is mapping or (v is iterable and v is not string) %}
-{{ sp }}- **{{ k }}:**
-{{ kv(v, indent + 1) }}
-    {% else %}
-{{ sp }}- **{{ k }}:** {{ v }}
-    {% endif %}
-  {% endfor %}
-{% elif value is iterable and value is not string %}
-  {% for item in value %}
-    {% if item is mapping or (item is iterable and item is not string) %}
-{{ sp }}- [{{ loop.index0 }}] {{ kv(item, indent + 1) }}
-    {% else %}
-{{ sp }}- [{{ loop.index0 }}] {{ item }}
-    {% endif %}
-  {% endfor %}
-{% else %}
-{{ sp }}{{ value }}
-{% endif %}
-{% endmacro %}
+{%- macro kv(value, indent, ns) -%}
+{%- set sp = '  ' * indent -%}
+{%- if value is mapping -%}
+  {%- for k, v in value.items() -%}
+    {%- if v is mapping or (v is iterable and v is not string) -%}
+      {%- do ns.lines.append(sp ~ '- **' ~ k ~ ':**') -%}
+      {{ kv(v, indent + 1, ns) }}
+    {%- else -%}
+      {%- do ns.lines.append(sp ~ '- **' ~ k ~ ':** ' ~ v) -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- elif value is iterable and value is not string -%}
+  {%- for item in value -%}
+    {%- if item is mapping or (item is iterable and item is not string) -%}
+      {%- do ns.lines.append(sp ~ '- \\[' ~ loop.index0 ~ '\\]') -%}
+      {{ kv(item, indent + 1, ns) }}
+    {%- else -%}
+      {%- do ns.lines.append(sp ~ '- \\[' ~ loop.index0 ~ '\\] ' ~ item) -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- else -%}
+  {%- do ns.lines.append(sp ~ value) -%}
+{%- endif -%}
+{%- endmacro -%}
 
 # {{ entityname }}
 
-{{- kv(data, 0) | trim -}}
+{%- set ns = namespace(lines=[]) -%}
+{{ kv(data, 0, ns) }}
+{% for line in ns.lines %}
+{{ line }}
+{% endfor %}
